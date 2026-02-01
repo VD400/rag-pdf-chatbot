@@ -1,0 +1,5 @@
+.env
+__pycache__/  
+.vscode
+temp_*.pdf
+chroma_db_embed/
