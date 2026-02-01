@@ -40,7 +40,8 @@ pip install -r requirements.txt
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 
 ### 5. Run the application
-You need to open **two separate terminals** to run the backend(api.py) and frontend(app.py) simultaneously.
+You need to open **two separate terminals** to run the backend(api.py) and frontend(app.py) simultaneously.  
+
 **Terminal 1 : Start the Backend (FastAPI)**
 ```bash 
 uvicorn api:app --reload
@@ -51,3 +52,6 @@ Wait until you see: Application setup complete.
 ```bash
 streamlit run app.py
 ```
+
+### Demo Run of the application
+![App Demo](demo.png)
