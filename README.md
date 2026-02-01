@@ -10,6 +10,10 @@ A Retrieval-Augmented Generation (RAG) chatbot that allows users to "chat" with 
 ## 🚀 How to Run locally
 
 ### 1. Clone the repo
+
+Repository URL:
+https://github.com/VD400/rag-pdf-chatbot
+
 ```bash
-git clone [https://github.com/VD400/rag-pdf-chatbot.git](https://github.com/VD400/rag-pdf-chatbot.git)
+git clone https://github.com/VD400/rag-pdf-chatbot.git
 cd rag-pdf-chatbot
