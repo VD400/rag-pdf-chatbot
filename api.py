@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 import chromadb
 from chromadb.config import Settings 
-
+print(f"🔎 RUNNING CHROMA VERSION: {chromadb.__version__}")
 load_dotenv()
 app = FastAPI()
 
