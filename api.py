@@ -17,6 +17,20 @@ from langchain_core.prompts import ChatPromptTemplate
 load_dotenv()
 app = FastAPI()
 
+# --- GLOBAL SETUP (Run once on startup) ---
+# 1. Setup the Chroma Client globally so it stays open safely
+CHROMA_CLIENT = chromadb.PersistentClient(
+    path="./chroma_db",
+    settings=Settings(anonymized_telemetry=False) # Fix applied here permanently
+)
+
+# 2. Setup Embeddings globally
+hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+EMBEDDINGS = HuggingFaceInferenceAPIEmbeddings(
+    api_key=hf_token, 
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
 rag_chain = None
 
 class ChatRequest(BaseModel):
@@ -26,6 +40,7 @@ class ChatRequest(BaseModel):
 async def upload_document(file: UploadFile = File(...)):
     global rag_chain
     file_location = f"temp_{file.filename}"
+    
     with open(file_location, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
@@ -34,33 +49,35 @@ async def upload_document(file: UploadFile = File(...)):
         docs = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_documents(docs)
-        hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-        embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=hf_token, model_name="sentence-transformers/all-MiniLM-L6-v2")
-        client = chromadb.PersistentClient(
-            path="./chroma_db",
-            settings=Settings(anonymized_telemetry=False)
-        )
+        
+        # Use the GLOBAL client (Faster & Safer)
         vectorstore = Chroma.from_documents(
             documents=splits,
-            embedding=embeddings,
-            client=client 
+            embedding=EMBEDDINGS,
+            client=CHROMA_CLIENT 
         )
+        
         retriever = vectorstore.as_retriever()
 
-        llm = ChatOpenAI(model="liquid/lfm-2.5-1.2b-thinking:free",
-                base_url="https://openrouter.ai/api/v1",
-                api_key=os.getenv("OPENROUTER_API_KEY"))
+        llm = ChatOpenAI(
+            model="liquid/lfm-2.5-1.2b-thinking:free",
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY")
+        )
         
-        system_prompt = "You are a helpful assistant. Answer concisely based on the context provided. If the answer does not exist in the context, just say so.\n\n{context}"
+        system_prompt = "You are a helpful assistant. Answer based on the context:\n\n{context}"
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
             ("human", "{input}"),
         ])
+        
         question_answer_chain = create_stuff_documents_chain(llm, prompt)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-        return {"status" : "success", "message": "File processed and AI ready."}
+        
+        return {"status": "success", "message": "File processed."}
     
     except Exception as e:
+        print(f"ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(file_location):
@@ -68,9 +85,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    global rag_chain
     if rag_chain is None:
         raise HTTPException(status_code=400, detail="Please upload a document first.")
     response = rag_chain.invoke({"input": request.query})
     return {"answer": response["answer"]}
-
