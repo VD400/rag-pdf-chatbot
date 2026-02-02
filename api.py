@@ -36,10 +36,14 @@ async def upload_document(file: UploadFile = File(...)):
         splits = text_splitter.split_documents(docs)
         hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
         embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=hf_token, model_name="sentence-transformers/all-MiniLM-L6-v2")
+        client = chromadb.PersistentClient(
+            path="./chroma_db",
+            settings=Settings(anonymized_telemetry=False)
+        )
         vectorstore = Chroma.from_documents(
-        documents=splits,
-        embedding=embeddings,
-        client_settings=Settings(anonymized_telemetry=False)
+            documents=splits,
+            embedding=embeddings,
+            client=client 
         )
         retriever = vectorstore.as_retriever()
 
