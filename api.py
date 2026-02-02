@@ -8,6 +8,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_openai import ChatOpenAI
+import chromadb
+from chromadb.config import Settings
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -34,7 +36,11 @@ async def upload_document(file: UploadFile = File(...)):
         splits = text_splitter.split_documents(docs)
         hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
         embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=hf_token, model_name="sentence-transformers/all-MiniLM-L6-v2")
-        vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+        vectorstore = Chroma.from_documents(
+        documents=splits,
+        embedding=embeddings,
+        client_settings=Settings(anonymized_telemetry=False)
+        )
         retriever = vectorstore.as_retriever()
 
         llm = ChatOpenAI(model="liquid/lfm-2.5-1.2b-thinking:free",
